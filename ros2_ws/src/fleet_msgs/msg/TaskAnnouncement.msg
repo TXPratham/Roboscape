@@ -1,0 +1,7 @@
+string task_id
+float64 pickup_x
+float64 pickup_y
+float64 dropoff_x
+float64 dropoff_y
+int32 priority
+float64 timestamp

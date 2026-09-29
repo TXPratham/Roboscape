@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon Warehouse Logistics & Autonomous AMR Fleet Digital Twin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap"></noscript>
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Header Navigation -->
+    <header>
+      <div class="header-branding">
+        <div class="header-subtitle">Decentralized Fleet Coordination</div>
+        <div class="header-title">
+          WAREHOUSE OPERATIONS OVERVIEW
+          <span class="badge">DIGITAL TWIN v2.4</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <button id="btn-add-robot" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Add Robot
+        </button>
+        <button id="btn-remove-robot" class="btn btn-danger" style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Remove Robot
+        </button>
+        <button id="btn-create-task" class="btn btn-warning">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6M12 9v6"/></svg>
+          Create Task
+        </button>
+
+        <!-- ROS 2 Bridge Status Pill -->
+        <div class="header-status-pill" id="ros2-status-pill" style="border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.08);">
+          <span class="pulse-dot" id="ros2-pulse-dot" style="background:#0ea5e9; box-shadow:0 0 8px #0ea5e9;"></span>
+          <span id="ros2-status-text" style="color:#38bdf8;">ROS 2: ws://localhost:9090</span>
+        </div>
+
+        <!-- Telemetry Status Pill -->
+        <div class="header-status-pill">
+          <span class="pulse-dot"></span>
+          <span id="active-amr-counter">ACTIVE AMRs: 3</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace-layout">
+      <!-- 3D Viewport -->
+      <main id="viewport-container">
+        <!-- Viewport Topbar Overlay -->
+        <div class="viewport-topbar">
+          <div class="viewport-title-box">
+            <span class="section-num">01</span>
+            <span>PHOTOREALISTIC 3D WAREHOUSE DIGITAL TWIN</span>
+          </div>
+
+          <div class="viewport-controls-group">
+            <!-- Camera Presets -->
+            <div class="cam-btn-group">
+              <button class="cam-btn active" data-cam="overview">Overview 3D</button>
+              <button class="cam-btn" data-cam="follow">Follow AMR</button>
+              <button class="cam-btn" data-cam="topdown">Top-Down</button>
+              <button class="cam-btn" data-cam="workstation">Workstation</button>
+            </div>
+
+            <!-- Toggles -->
+            <label class="hud-toggle-pill">
+              <input type="checkbox" id="chk-3d-huds" checked>
+              <span>3D HUDs</span>
+            </label>
+            <label class="hud-toggle-pill">
+              <input type="checkbox" id="chk-laser-guides" checked>
+              <span>Laser Guides</span>
+            </label>
+
+            <!-- Sim Controls (Play/Pause) -->
+            <div class="speed-control-group">
+              <button id="btn-pause" class="speed-btn" title="Pause / Resume Sim" style="border-right: none;">⏸</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Camera Navigation Hint -->
+        <div class="viewport-hint">
+          Left-drag to Orbit &middot; Right-drag to Pan &middot; Scroll to Zoom &middot; Click AMR to Inspect
+        </div>
+
+        <!-- ThreeJS Canvas -->
+        <canvas id="canvas3d"></canvas>
+
+        <!-- 3D Dynamic Floating Robot HUD Overlay Container -->
+        <div id="hud-overlay-container"></div>
+
+        <!-- Viewport Bottom Badge -->
+        <div class="viewport-bottom-badge">
+          <span>REAL-TIME WEBGL</span>
+          <span>&bull;</span>
+          <span>60 FPS INTERPOLATED</span>
+          <span>&bull;</span>
+          <span>ALL UNITS ACTIVE</span>
+        </div>
+      </main>
+
+      <!-- Right Operational Telemetry Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-scrollable">
+          <!-- Section 02: Operational Metrics -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">
+              <div class="sidebar-section-title">
+                <span class="sec-index">02</span>
+                <span>OPERATIONAL METRICS</span>
+              </div>
+              <div class="sidebar-section-meta">LIVE TELEMETRY</div>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-num" id="metric-completed">0</div>
+                <div class="metric-label">COMPLETED TASKS</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-num" id="metric-collisions">0</div>
+                <div class="metric-label">COLLISIONS</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-num" id="metric-deadlocks">0</div>
+                <div class="metric-label">DEADLOCKS</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-num" id="metric-avg-time">0.0s</div>
+                <div class="metric-label">AVG. CYCLE TIME</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 03: Active AMRs -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">
+              <div class="sidebar-section-title">
+                <span class="sec-index">03</span>
+                <span>ACTIVE AMRS</span>
+              </div>
+              <div class="sidebar-section-meta" id="sidebar-amr-online-count">3 ONLINE</div>
+            </div>
+
+            <div class="robot-card-list" id="robot-card-list">
+              <!-- Dynamically rendered robot cards -->
+            </div>
+          </div>
+
+          <!-- Section 04: Task Missions Queue -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">
+              <div class="sidebar-section-title">
+                <span class="sec-index">04</span>
+                <span>TASK MISSIONS</span>
+              </div>
+              <div class="sidebar-section-meta" id="sidebar-task-queue-count">4 QUEUED</div>
+            </div>
+
+            <div class="task-mission-list" id="task-mission-list">
+              <!-- Dynamically rendered task missions -->
+            </div>
+          </div>
+
+          <!-- Section 05: Fleet Comms Live Feed -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">
+              <div class="sidebar-section-title">
+                <span class="sec-index">05</span>
+                <span>FLEET COMMS</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="btn-fullscreen-comms" class="speed-btn" style="padding: 3px 8px; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: rgba(0, 242, 254, 0.12); cursor: pointer; border-radius: 4px; font-weight: 700;" title="Open Full Screen Chat Terminal">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                  FULLSCREEN CHAT
+                </button>
+                <button id="btn-clear-comms" class="speed-btn" style="padding: 2px 7px; font-size: 9px;" title="Clear Log Feed">CLEAR</button>
+                <div class="sidebar-section-meta" id="sidebar-comms-status">P2P LIVE</div>
+              </div>
+            </div>
+
+            <div class="fleet-comms-container">
+              <div class="fleet-comms-feed" id="fleet-comms-feed">
+                <!-- Dynamically rendered live comms feed -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Modal: Add Robot -->
+    <div class="modal-overlay" id="modal-add-robot">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">Deploy New AMR Unit</div>
+          <button class="modal-close-btn" data-close="modal-add-robot">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Robot Model & Payload Capacity</label>
+            <select class="form-control" id="select-robot-model">
+              <option value="ATR-400">ATR-400 Courier (400kg / 1.2 m/s High Speed)</option>
+              <option value="ATR-600">ATR-600 Heavy-Lift Robotic Arm (600kg / 1.0 m/s)</option>
+            </select>
+          </div>
+          <p style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+            Autonomous unit will be initialized with full 100% battery capacity and enrolled into the decentralized traffic routing highway.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" data-close="modal-add-robot">Cancel</button>
+          <button class="btn btn-primary" id="btn-confirm-add-robot">Deploy AMR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Remove Robot -->
+    <div class="modal-overlay" id="modal-remove-robot">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title" style="color: #ef4444;">Decommission AMR Unit</div>
+          <button class="modal-close-btn" data-close="modal-remove-robot">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select AMR Unit to Decommission</label>
+            <select class="form-control" id="select-remove-robot">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <p style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+            Decommissioning an AMR immediately releases any carried load back to warehouse inventory, clears active routing corridors, and removes its digital twin mesh from active telemetry.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" data-close="modal-remove-robot">Cancel</button>
+          <button class="btn btn-danger" id="btn-confirm-remove-robot">Decommission & Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Create Task -->
+    <div class="modal-overlay" id="modal-create-task">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">Create Logistics Order</div>
+          <button class="modal-close-btn" data-close="modal-create-task">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select Warehouse SKU / Package</label>
+            <select class="form-control" id="select-task-sku">
+              <!-- Populated dynamically from inventory -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target AMR Unit (Manual or Auto)</label>
+            <select class="form-control" id="select-task-assigned-robot">
+              <option value="auto">Auto-Assign (Auction Manager)</option>
+              <option value="robot_1">Robot 1 (ATR-400)</option>
+              <option value="robot_2">Robot 2 (ATR-400)</option>
+              <option value="robot_3">Robot 3 (ATR-600 Heavy-Lift)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Destination Delivery Bay / Workstation</label>
+            <select class="form-control" id="select-task-bay">
+              <option value="BAY-1">Delivery Bay 1 (X: -10.0m, Z: 6.9m)</option>
+              <option value="BAY-2">Delivery Bay 2 (X: -3.5m, Z: 6.9m)</option>
+              <option value="BAY-3">Delivery Bay 3 (X: +3.5m, Z: 6.9m)</option>
+              <option value="BAY-4">Delivery Bay 4 (X: +10.0m, Z: 6.9m)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dispatch Priority</label>
+            <select class="form-control" id="select-task-priority">
+              <option value="P1">P1 - Urgent Express</option>
+              <option value="P2" selected>P2 - Standard Fulfillment</option>
+              <option value="P3">P3 - Bulk Replenishment</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" data-close="modal-create-task">Cancel</button>
+          <button class="btn btn-warning" id="btn-confirm-create-task">Dispatch Mission</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Robot Inspector -->
+    <div class="modal-overlay" id="modal-robot-inspector">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title" id="inspector-robot-title">ATR-400 Telemetry</div>
+          <button class="modal-close-btn" data-close="modal-robot-inspector">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: var(--font-mono); font-size: 11px;">
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">STATUS:</span>
+              <div id="insp-status" style="font-weight: 700; color: #38bdf8; font-size: 13px;">IDLE</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">SPEED:</span>
+              <div id="insp-speed" style="font-weight: 700; color: #00f2fe; font-size: 13px;">1.2 m/s</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">BATTERY:</span>
+              <div id="insp-battery" style="font-weight: 700; color: #10b981; font-size: 13px;">98%</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">PAYLOAD:</span>
+              <div id="insp-payload" style="font-weight: 700; color: #ffffff; font-size: 13px;">0.0 kg</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">ODOMETER:</span>
+              <div id="insp-odometer" style="font-weight: 700; color: #ffffff; font-size: 13px;">142.5 m</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px;">
+              <span style="color: var(--text-dim);">COORDINATES:</span>
+              <div id="insp-coords" style="font-weight: 700; color: #ffffff; font-size: 13px;">(-7.0, 5.5)</div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 6px;">
+            <label>Assigned Mission</label>
+            <div id="insp-task-desc" style="font-size: 12px; font-family: var(--font-mono); color: var(--accent-cyan); background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+              No active mission. Standing by in transit aisle.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="btn-insp-follow">Follow Camera</button>
+          <button class="btn btn-secondary" id="btn-insp-drive" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: rgba(0, 242, 254, 0.1);">🎮 Drive (Teleop)</button>
+          <button class="btn btn-warning" id="btn-insp-assign" style="background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-orange); color: var(--accent-orange);">📋 Assign Task</button>
+          <button class="btn btn-danger" id="btn-insp-remove" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; display: flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Remove Robot
+          </button>
+          <button class="btn btn-ghost" data-close="modal-robot-inspector">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Fullscreen Fleet Comms Terminal (Live Chat) -->
+    <div class="modal-overlay" id="modal-fullscreen-comms">
+      <div class="modal-card" style="width: 94vw; max-width: 1300px; height: 90vh; max-height: 900px; display: flex; flex-direction: column; background: rgba(10, 14, 23, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 40px rgba(0, 242, 254, 0.25);">
+        <!-- Terminal Header -->
+        <div class="modal-header" style="border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding: 12px 20px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 20px;">📡</div>
+            <div>
+              <div class="modal-title" style="font-size: 16px; color: #ffffff; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                FLEET COMMUNICATIONS COMMAND TERMINAL (LIVE CHAT)
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;">P2P MESH ONLINE</span>
+              </div>
+              <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-dim); margin-top: 2px;">
+                Decentralized Multi-AMR Coordination &middot; Collision Resolution Logs &middot; Bid Auctions &middot; Operator Dispatch
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="btn-fullscreen-clear" class="speed-btn" style="padding: 4px 10px; font-size: 10px;">CLEAR LOGS</button>
+            <button class="modal-close-btn" data-close="modal-fullscreen-comms" style="font-size: 22px;">&times;</button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: rgba(16, 23, 38, 0.7); border-bottom: 1px solid rgba(56, 189, 248, 0.15);">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); font-weight: 700;">FILTER:</span>
+            <button class="comms-filter-btn active" data-filter="all" style="padding: 2px 10px; font-size: 10px; border-radius: 4px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 254, 0.15); color: #ffffff; font-family: var(--font-mono); cursor: pointer;">ALL</button>
+            <button class="comms-filter-btn" data-filter="COLLISION" style="padding: 2px 10px; font-size: 10px; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.4); background: transparent; color: #ef4444; font-family: var(--font-mono); cursor: pointer;">COLLISION & REROUTE</button>
+            <button class="comms-filter-btn" data-filter="SAFETY" style="padding: 2px 10px; font-size: 10px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.4); background: transparent; color: #f59e0b; font-family: var(--font-mono); cursor: pointer;">SAFETY ALERTS</button>
+            <button class="comms-filter-btn" data-filter="TASK" style="padding: 2px 10px; font-size: 10px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4); background: transparent; color: #10b981; font-family: var(--font-mono); cursor: pointer;">AUCTION & TASKS</button>
+            <button class="comms-filter-btn" data-filter="OPERATOR" style="padding: 2px 10px; font-size: 10px; border-radius: 4px; border: 1px solid rgba(14, 165, 233, 0.4); background: transparent; color: #38bdf8; font-family: var(--font-mono); cursor: pointer;">OPERATOR CHAT</button>
+          </div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-cyan);">
+            Active Units: <strong style="color:#ffffff;">Robot-1, Robot-2, Robot-3</strong> | Port: <strong style="color:#ffffff;">9090</strong>
+          </div>
+        </div>
+
+        <!-- Scrollable Chat Stream -->
+        <div id="fullscreen-chat-feed" style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; background: rgba(5, 8, 16, 0.85); font-family: var(--font-mono);">
+          <!-- Dynamic chat messages injected here -->
+        </div>
+
+        <!-- Quick Fleet Command Actions Bar -->
+        <div style="padding: 8px 20px; background: rgba(16, 23, 38, 0.9); border-top: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); font-weight: 700;">COMMANDS:</span>
+          <button id="btn-quick-estop" class="btn btn-ghost" style="padding: 3px 10px; font-size: 11px; border: 1px solid #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1);">🛑 E-STOP FLEET</button>
+          <button id="btn-quick-resume" class="btn btn-ghost" style="padding: 3px 10px; font-size: 11px; border: 1px solid #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1);">▶️ RESUME AUTONOMOUS</button>
+          <button id="btn-quick-reroute" class="btn btn-ghost" style="padding: 3px 10px; font-size: 11px; border: 1px solid #00f2fe; color: #00f2fe; background: rgba(0, 242, 254, 0.1);">🔄 TRIGGER FLEET REROUTE</button>
+          <button id="btn-quick-ping" class="btn btn-ghost" style="padding: 3px 10px; font-size: 11px; border: 1px solid #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.1);">⚡ STATUS PING</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div style="padding: 12px 20px; background: rgba(10, 14, 23, 0.98); border-top: 1px solid rgba(56, 189, 248, 0.25); display: flex; gap: 10px; align-items: center;">
+          <select id="chat-target-select" class="form-control" style="width: 170px; height: 38px; font-size: 11px; font-family: var(--font-mono); background: rgba(0,0,0,0.6); border: 1px solid var(--accent-cyan); color: #ffffff;">
+            <option value="ALL">Broadcast to All</option>
+            <option value="robot_1">Target: Robot-1</option>
+            <option value="robot_2">Target: Robot-2</option>
+            <option value="robot_3">Target: Robot-3</option>
+          </select>
+          <input type="text" id="chat-input-message" class="form-control" placeholder="Enter message or operational instruction to broadcast to fleet..." style="flex: 1; height: 38px; font-size: 12px; font-family: var(--font-mono); background: rgba(0,0,0,0.6); border: 1px solid var(--border-color); color: #ffffff;" />
+          <button id="btn-chat-send" class="btn btn-primary" style="height: 38px; padding: 0 20px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            SEND
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Manual AMR Teleoperation & Direct Control -->
+    <div class="modal-overlay" id="modal-manual-teleop">
+      <div class="modal-card" style="width: 480px; max-width: 95vw; background: rgba(10, 14, 23, 0.97); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.2);">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🎮</span>
+            <div class="modal-title">Manual AMR Teleoperation Dock</div>
+          </div>
+          <button class="modal-close-btn" data-close="modal-manual-teleop">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 16px 20px;">
+          <!-- Robot Selector -->
+          <div class="form-group">
+            <label>Active Controlled AMR</label>
+            <select class="form-control" id="select-teleop-robot" style="font-weight: 700; color: var(--accent-cyan);">
+              <option value="robot_1">Robot 1 (ATR-400 Courier)</option>
+              <option value="robot_2">Robot 2 (ATR-400 Courier)</option>
+              <option value="robot_3">Robot 3 (ATR-600 Heavy-Lift)</option>
+            </select>
+          </div>
+
+          <!-- Status Indicator -->
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 14px; font-family: var(--font-mono); font-size: 11px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-dim);">CONTROL MODE:</span>
+              <span id="teleop-mode-badge" style="color: #10b981; font-weight: 700;">🟢 AUTONOMOUS (HIGHWAY)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-dim);">COORDINATES (X, Z):</span>
+              <span id="teleop-coords" style="color: #ffffff; font-weight: 700;">(-7.0m, 5.5m)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-dim);">HEADING / SPEED:</span>
+              <span id="teleop-speed-yaw" style="color: #00f2fe; font-weight: 700;">0.0 rad &middot; 0.0 m/s</span>
+            </div>
+          </div>
+
+          <!-- Interactive D-Pad Controller -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 15px 0;">
+            <div>
+              <button id="btn-teleop-forward" class="teleop-pad-btn" style="width: 70px; height: 50px; font-size: 18px; border-radius: 6px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 254, 0.15); color: #ffffff; cursor: pointer; font-weight: 800;" title="Drive Forward (W / Up Arrow)">▲<br/><span style="font-size: 9px; color: var(--accent-cyan);">FWD [W]</span></button>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button id="btn-teleop-left" class="teleop-pad-btn" style="width: 70px; height: 50px; font-size: 18px; border-radius: 6px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 254, 0.15); color: #ffffff; cursor: pointer; font-weight: 800;" title="Turn Left (A / Left Arrow)">◀<br/><span style="font-size: 9px; color: var(--accent-cyan);">LEFT [A]</span></button>
+              <button id="btn-teleop-stop" class="teleop-pad-btn" style="width: 70px; height: 50px; font-size: 16px; border-radius: 6px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #ef4444; cursor: pointer; font-weight: 800;" title="Emergency Brake (Space)">🛑<br/><span style="font-size: 9px;">BRAKE</span></button>
+              <button id="btn-teleop-right" class="teleop-pad-btn" style="width: 70px; height: 50px; font-size: 18px; border-radius: 6px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 254, 0.15); color: #ffffff; cursor: pointer; font-weight: 800;" title="Turn Right (D / Right Arrow)">▶<br/><span style="font-size: 9px; color: var(--accent-cyan);">RIGHT [D]</span></button>
+            </div>
+            <div>
+              <button id="btn-teleop-reverse" class="teleop-pad-btn" style="width: 70px; height: 50px; font-size: 18px; border-radius: 6px; border: 1px solid var(--accent-orange); background: rgba(245, 158, 11, 0.15); color: #ffffff; cursor: pointer; font-weight: 800;" title="Drive Reverse (S / Down Arrow)">▼<br/><span style="font-size: 9px; color: var(--accent-orange);">REV [S]</span></button>
+            </div>
+          </div>
+
+          <!-- Speed Setting & Override Controls -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-dim);">Speed:</div>
+            <div style="display: flex; gap: 6px;">
+              <button class="teleop-speed-btn active" data-speed="0.4" style="padding: 2px 8px; font-size: 10px; border-radius: 4px; border: 1px solid var(--accent-cyan); background: rgba(0, 242, 254, 0.2); color: #ffffff; font-family: var(--font-mono); cursor: pointer;">0.4 m/s</button>
+              <button class="teleop-speed-btn" data-speed="0.8" style="padding: 2px 8px; font-size: 10px; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; color: var(--text-dim); font-family: var(--font-mono); cursor: pointer;">0.8 m/s</button>
+              <button class="teleop-speed-btn" data-speed="1.2" style="padding: 2px 8px; font-size: 10px; border-radius: 4px; border: 1px solid var(--border-color); background: transparent; color: var(--text-dim); font-family: var(--font-mono); cursor: pointer;">1.2 m/s</button>
+            </div>
+          </div>
+
+          <div style="font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 12px; text-align: center;">
+            Keyboard controls active: <strong>W/A/S/D</strong> or <strong>Arrows</strong> to drive &middot; <strong>Space</strong> to brake
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between;">
+          <button id="btn-teleop-resume-auto" class="btn btn-warning" style="font-size: 11px;">🔄 Resume Autonomous Route</button>
+          <button class="btn btn-ghost" data-close="modal-manual-teleop">Close Teleop</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Local Script Dependencies -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="lib/roslib.min.js"></script>
+  <!-- Dataset Dependencies (Kept Separate) -->
+  <script src="data/navigation_runs.js"></script>
+  <script src="data/robot_interactions.js"></script>
+  <script src="data/network_6g_telemetry.js"></script>
+
+  <!-- Simulation & Controller Logic -->
+  <script src="textures.js"></script>
+  <script src="warehouse_data.js"></script>
+  <script src="warehouse_sim.js"></script>
+  <script src="main.js"></script>
+  <script src="ros_bridge.js"></script>
+</body>
+</html>

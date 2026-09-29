@@ -1,0 +1,25 @@
+intersections:
+  INT_NORTH:
+    center: [0.0, 4.0]
+    radius: 2.5
+    capacity: 1
+    safe_waiting_points:
+      robot_1: [-3.5, 4.0]
+      robot_2: [0.0, 6.0]
+      robot_3: [3.5, 4.0]
+  INT_SOUTH:
+    center: [0.0, -4.0]
+    radius: 2.5
+    capacity: 1
+    safe_waiting_points:
+      robot_1: [-3.5, -4.0]
+      robot_2: [0.0, -6.0]
+      robot_3: [3.5, -4.0]
+  INT_CENTER:
+    center: [0.0, 0.0]
+    radius: 2.0
+    capacity: 1
+    safe_waiting_points:
+      robot_1: [-2.5, 0.0]
+      robot_2: [0.0, 2.5]
+      robot_3: [2.5, 0.0]

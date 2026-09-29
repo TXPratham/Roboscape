@@ -1,0 +1,9 @@
+float64 timestamp
+string sender_id
+string receiver_id
+string comm_type
+float64 latency_ms
+float64 packet_loss
+float64 jitter_ms
+float64 throughput_mbps
+string message

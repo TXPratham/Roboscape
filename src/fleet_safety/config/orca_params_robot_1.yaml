@@ -1,0 +1,32 @@
+orca_local_planner:
+  # ==============================================================================
+  # ORCA (Optimal Reciprocal Collision Avoidance) Configuration
+  # Configured for dynamic time-horizon scaling and multi-robot safety
+  # ==============================================================================
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 50.0
+
+    # Core ORCA Parameters
+    base_time_horizon: 5.0              # Base collision lookahead horizon (seconds)
+    base_time_horizon_obstacle: 2.5     # Lookahead for static/shelf obstacles (seconds)
+    base_min_safe_distance: 0.40        # Base inter-robot clearance (meters)
+    neighbor_distance: 10.0             # Radius for tracking surrounding AMRs (meters)
+    max_neighbors: 10                   # Max surrounding robots to consider in LP
+    robot_radius: 0.38                  # Physical robot radius
+
+    # Playback Speed & High-Speed Dynamic Scaling
+    # Automatically scales time_horizon and min_safe_distance under accelerated simulation
+    dynamic_scaling:
+      enabled: true
+      speed_scale_factor: 1.0           # Synced to sim playback speed (1x, 2x, 4x)
+      time_horizon_scale_exponent: 1.0  # Linear scaling of horizon (e.g., 4x speed -> 20.0s horizon)
+      safe_distance_scale_exponent: 0.5 # Sub-linear clearance expansion
+
+    # Hard Emergency Stop Safety Layer (Runs at 50Hz deterministic rate)
+    emergency_stop:
+      enabled: true
+      hard_min_safe_distance: 0.35      # Physical hard stop distance independent of playback speed (meters)
+      emergency_deceleration: 3.5       # Instant emergency braking limit (m/s^2)
+      publish_zero_cmd_vel: true        # Direct override on /robot_N/cmd_vel
+      safety_events_topic: "/fleet/safety_events"

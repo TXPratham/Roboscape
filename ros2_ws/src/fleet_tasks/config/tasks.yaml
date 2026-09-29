@@ -1,0 +1,21 @@
+tasks:
+  - task_id: "TASK_001"
+    pickup: [-6.5, -5.0]
+    dropoff: [-9.5, 6.9]
+    priority: 1
+    description: "Pallet transfer Shelf Aisle 10 to Delivery Bay 1"
+  - task_id: "TASK_002"
+    pickup: [3.5, -1.5]
+    dropoff: [-3.5, 6.9]
+    priority: 2
+    description: "Tote delivery Shelf Aisle 11 to Delivery Bay 2"
+  - task_id: "TASK_003"
+    pickup: [-6.5, 2.0]
+    dropoff: [3.5, 6.9]
+    priority: 1
+    description: "Replenishment Shelf Aisle 12 to Delivery Bay 3"
+  - task_id: "TASK_004"
+    pickup: [6.5, 5.5]
+    dropoff: [9.5, 6.9]
+    priority: 3
+    description: "Routine transfer Shelf Aisle 13 to Delivery Bay 4"

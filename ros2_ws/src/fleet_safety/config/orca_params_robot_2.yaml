@@ -1,0 +1,9 @@
+orca_local_planner:
+  ros__parameters:
+    time_horizon: 5.0
+    time_horizon_obstacle: 2.0
+    max_speed: 0.50
+    neighbor_distance: 10.0
+    robot_radius: 0.35
+    safety_margin: 0.15
+    playback_speed_scale: 1.0

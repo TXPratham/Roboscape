@@ -1,0 +1,16 @@
+﻿{
+    "title":  "Warehouse Robotics and Logistics",
+    "licenses":  [
+                     {
+                         "name":  "MIT"
+                     }
+                 ],
+    "keywords":  [
+                     "robotics",
+                     "warehouse",
+                     "logistics",
+                     "automation",
+                     "manufacturing"
+                 ],
+    "description":  "Synthetic warehouse robotics dataset including task execution metrics, sensor readings, grasp poses, and success/failure outcomes for logistics optimization."
+}

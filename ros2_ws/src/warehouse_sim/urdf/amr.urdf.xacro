@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="warehouse_amr">
+
+  <xacro:arg name="robot_prefix" default="robot_1" />
+  <xacro:property name="prefix" value="$(arg robot_prefix)" />
+
+  <!-- Base footprint -->
+  <link name="${prefix}/base_footprint"/>
+
+  <!-- Base link -->
+  <link name="${prefix}/base_link">
+    <inertial>
+      <mass value="25.0"/>
+      <origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <inertia ixx="0.5" ixy="0" ixz="0" iyy="0.5" iyz="0" izz="0.8"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.65 0.50 0.20"/>
+      </geometry>
+      <material name="chassis_mat">
+        <color rgba="0.1 0.15 0.25 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.12" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.65 0.50 0.20"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/base_footprint_joint" type="fixed">
+    <parent link="${prefix}/base_footprint"/>
+    <child link="${prefix}/base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Left wheel -->
+  <link name="${prefix}/left_wheel">
+    <inertial>
+      <mass value="2.5"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+      <material name="wheel_mat">
+        <color rgba="0.05 0.05 0.05 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/left_wheel_joint" type="continuous">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/left_wheel"/>
+    <origin xyz="0 0.25 0.10" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- Right wheel -->
+  <link name="${prefix}/right_wheel">
+    <inertial>
+      <mass value="2.5"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+      <material name="wheel_mat">
+        <color rgba="0.05 0.05 0.05 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.570796 0 0"/>
+      <geometry>
+        <cylinder radius="0.10" length="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/right_wheel_joint" type="continuous">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/right_wheel"/>
+    <origin xyz="0 -0.25 0.10" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- Caster front -->
+  <link name="${prefix}/caster_front">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+      <material name="caster_mat">
+        <color rgba="0.3 0.3 0.3 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/caster_front_joint" type="fixed">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/caster_front"/>
+    <origin xyz="0.25 0 0.04" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Caster back -->
+  <link name="${prefix}/caster_back">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+      <material name="caster_mat">
+        <color rgba="0.3 0.3 0.3 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/caster_back_joint" type="fixed">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/caster_back"/>
+    <origin xyz="-0.25 0 0.04" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 2D Laser Scanner -->
+  <link name="${prefix}/laser_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.06"/>
+      </geometry>
+      <material name="lidar_mat">
+        <color rgba="0.0 0.8 0.9 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="${prefix}/laser_joint" type="fixed">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/laser_link"/>
+    <origin xyz="0.20 0 0.25" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU link -->
+  <link name="${prefix}/imu_link"/>
+  <joint name="${prefix}/imu_joint" type="fixed">
+    <parent link="${prefix}/base_link"/>
+    <child link="${prefix}/imu_link"/>
+    <origin xyz="0 0 0.15" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Plugins -->
+  <gazebo>
+    <plugin filename="libignition-gazebo-diff-drive-system.so" name="ignition::gazebo::systems::DiffDrive">
+      <left_joint>${prefix}/left_wheel_joint</left_joint>
+      <right_joint>${prefix}/right_wheel_joint</right_joint>
+      <wheel_separation>0.50</wheel_separation>
+      <wheel_radius>0.10</wheel_radius>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <topic>/${prefix}/cmd_vel</topic>
+      <odom_topic>/${prefix}/odom</odom_topic>
+      <tf_topic>/${prefix}/tf</tf_topic>
+      <frame_id>${prefix}/odom</frame_id>
+      <child_frame_id>${prefix}/base_footprint</child_frame_id>
+    </plugin>
+  </gazebo>
+
+</robot>
