@@ -1108,13 +1108,17 @@ function setupEventListeners() {
 
     const selRemove = document.getElementById('select-remove-robot');
     if (selRemove) {
+      const prevVal = selRemove.value;
       selRemove.innerHTML = '';
       SimState.robots.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.id;
-        opt.textContent = `${r.name} (${r.model}) - ${r.status}`;
+        opt.textContent = `${r.name} (${r.model}) - ${r.status.replace(/_/g, ' ')}`;
         selRemove.appendChild(opt);
       });
+      if (SimState.robots.some(r => r.id === prevVal)) {
+        selRemove.value = prevVal;
+      }
     }
 
     const selTeleop = document.getElementById('select-teleop-robot');
@@ -1131,16 +1135,69 @@ function setupEventListeners() {
     }
   }
 
+  // Toast feedback helper
+  function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.style.position = 'fixed';
+      container.style.top = '72px';
+      container.style.right = '24px';
+      container.style.zIndex = '99999';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '8px';
+      container.style.pointerEvents = 'none';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-pill toast-${type}`;
+    toast.style.pointerEvents = 'auto';
+    toast.style.background = type === 'danger' ? 'rgba(239, 68, 68, 0.95)' : (type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(14, 165, 233, 0.95)');
+    toast.style.color = '#ffffff';
+    toast.style.padding = '10px 16px';
+    toast.style.borderRadius = '6px';
+    toast.style.boxShadow = '0 6px 24px rgba(0,0,0,0.6)';
+    toast.style.fontSize = '12px';
+    toast.style.fontWeight = '700';
+    toast.style.fontFamily = 'var(--font-sans)';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    toast.style.gap = '8px';
+    toast.style.transition = 'all 0.25s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-8px)';
+
+    toast.innerHTML = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    });
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-8px)';
+      setTimeout(() => toast.remove(), 250);
+    }, 2800);
+  }
+  window.showToast = showToast;
+
   // Decommission and remove AMR unit
   function removeRobot(robotId) {
     if (!robotId) return;
-    const index = SimState.robots.findIndex(r => r.id === robotId);
+    const normalizedId = robotId.replace('_', '-');
+    const index = SimState.robots.findIndex(r => r.id === normalizedId || r.id === robotId);
     if (index === -1) return;
     const robot = SimState.robots[index];
+    const targetId = robot.id;
 
     // 1. Remove 3D Mesh
-    if (robotMeshes.has(robotId)) {
-      const mesh = robotMeshes.get(robotId);
+    if (robotMeshes.has(targetId)) {
+      const mesh = robotMeshes.get(targetId);
       scene.remove(mesh);
       mesh.traverse(child => {
         if (child.geometry) child.geometry.dispose();
@@ -1149,20 +1206,20 @@ function setupEventListeners() {
           else child.material.dispose();
         }
       });
-      robotMeshes.delete(robotId);
+      robotMeshes.delete(targetId);
     }
 
     // 2. Remove Laser Line
-    if (laserGuideLines.has(robotId)) {
-      const line = laserGuideLines.get(robotId);
+    if (laserGuideLines.has(targetId)) {
+      const line = laserGuideLines.get(targetId);
       scene.remove(line);
       if (line.geometry) line.geometry.dispose();
       if (line.material) line.material.dispose();
-      laserGuideLines.delete(robotId);
+      laserGuideLines.delete(targetId);
     }
 
     // 3. Remove 3D Floating HUD element from DOM
-    const hudCard = document.getElementById(`hud-card-${robotId}`);
+    const hudCard = document.getElementById(`hud-card-${targetId}`);
     if (hudCard) {
       hudCard.remove();
     }
@@ -1188,7 +1245,7 @@ function setupEventListeners() {
       robot.currentTask.assignedRobotId = null;
     }
     SimState.taskQueue.forEach(t => {
-      if (t.assignedRobotId === robotId) {
+      if (t.assignedRobotId === targetId || t.assignedRobotId === robotId) {
         t.assignedRobotId = null;
         if (t.status === 'IN_PROGRESS') {
           t.status = 'QUEUED';
@@ -1196,19 +1253,21 @@ function setupEventListeners() {
       }
     });
 
+    const robotName = robot.name || targetId;
+
     // 6. Remove robot from active state
     SimState.robots.splice(index, 1);
 
     // 7. Update selectedRobotId
-    if (SimState.selectedRobotId === robotId) {
+    if (SimState.selectedRobotId === targetId || SimState.selectedRobotId === robotId) {
       SimState.selectedRobotId = SimState.robots.length > 0 ? SimState.robots[0].id : null;
       const inspModal = document.getElementById('modal-robot-inspector');
       if (inspModal) inspModal.classList.remove('active');
     }
 
     // 8. Update active teleop robot if decommissioned
-    const rosId = robotId.replace('-', '_');
-    if (typeof activeTeleopRobotId !== 'undefined' && activeTeleopRobotId === rosId) {
+    const rosId = targetId.replace('-', '_');
+    if (typeof activeTeleopRobotId !== 'undefined' && (activeTeleopRobotId === rosId || activeTeleopRobotId === targetId)) {
       activeTeleopRobotId = SimState.robots.length > 0 ? SimState.robots[0].id.replace('-', '_') : null;
     }
 
@@ -1220,8 +1279,10 @@ function setupEventListeners() {
 
     // 10. Log to Fleet Comms
     if (window.logFleetComms) {
-      window.logFleetComms(robot.name || robotId, `DECOMMISSIONED: AMR unit removed from active warehouse fleet`, 'DENY');
+      window.logFleetComms(robotName, `DECOMMISSIONED: AMR unit removed from active warehouse fleet`, 'DENY');
     }
+
+    showToast(`🗑️ ${robotName} Decommissioned & Removed`, 'danger');
 
     updateUILists();
     updateRobotSelectDropdowns();
@@ -1258,23 +1319,26 @@ function setupEventListeners() {
     });
   }
 
+  function populateTaskSKUSelector() {
+    const sel = document.getElementById('select-task-sku');
+    if (sel) {
+      sel.innerHTML = '';
+      let availableBoxes = SimState.boxes.filter(b => !b.inTransit);
+      if (availableBoxes.length === 0) availableBoxes = SimState.boxes;
+      availableBoxes.slice(0, 25).forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.sku;
+        opt.textContent = `${b.sku} (${b.category} - ${b.weight}kg, Aisle ${b.aisle})`;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
   const btnCreateTask = document.getElementById('btn-create-task');
   if (btnCreateTask) {
     btnCreateTask.addEventListener('click', () => {
       updateRobotSelectDropdowns();
-      // Populate select with available boxes
-      const sel = document.getElementById('select-task-sku');
-      if (sel) {
-        sel.innerHTML = '';
-        let availableBoxes = SimState.boxes.filter(b => !b.inTransit);
-        if (availableBoxes.length === 0) availableBoxes = SimState.boxes;
-        availableBoxes.slice(0, 20).forEach(b => {
-          const opt = document.createElement('option');
-          opt.value = b.sku;
-          opt.textContent = `${b.sku} (${b.category} - ${b.weight}kg, Aisle ${b.aisle})`;
-          sel.appendChild(opt);
-        });
-      }
+      populateTaskSKUSelector();
       const m = document.getElementById('modal-create-task');
       if (m) m.classList.add('active');
     });
@@ -1323,12 +1387,13 @@ function setupEventListeners() {
 
       const m = document.getElementById('modal-add-robot');
       if (m) m.classList.remove('active');
+      showToast(`🤖 ${newRobot.name} successfully deployed to fleet!`, 'success');
       updateUILists();
       updateRobotSelectDropdowns();
     });
   }
 
-  // Confirm Remove Robot
+  // Confirm Remove Robot from Header Modal
   const btnConfirmRemove = document.getElementById('btn-confirm-remove-robot');
   if (btnConfirmRemove) {
     btnConfirmRemove.addEventListener('click', () => {
@@ -1354,7 +1419,7 @@ function setupEventListeners() {
     });
   }
 
-  // Confirm Create Task
+  // Confirm Create Task / Dispatch Mission
   const btnConfirmTask = document.getElementById('btn-confirm-create-task');
   if (btnConfirmTask) {
     btnConfirmTask.addEventListener('click', () => {
@@ -1365,9 +1430,11 @@ function setupEventListeners() {
 
       if (sku && bayId) {
         const newTask = WarehouseSim.createManualTask(sku, bayId, priority, assignedRobot);
+        const robotName = assignedRobot !== 'auto' ? (SimState.robots.find(r => r.id === assignedRobot || r.id === assignedRobot.replace('_', '-'))?.name || assignedRobot) : 'Auto Auction (CNP)';
         if (window.logFleetComms && newTask) {
-          window.logFleetComms('OPERATOR', `Created Task ${newTask.id}: ${sku} -> Bay ${bayId} (Priority: ${priority}, Target: ${assignedRobot})`, 'GRANT');
+          window.logFleetComms('OPERATOR', `Created Task ${newTask.id}: ${sku} -> Bay ${bayId} (Target: ${robotName}, Priority: ${priority})`, 'GRANT');
         }
+        showToast(`📋 Mission Dispatched: ${sku} -> ${bayId} (${robotName})`, 'success');
       }
       const m = document.getElementById('modal-create-task');
       if (m) m.classList.remove('active');
@@ -1406,52 +1473,27 @@ function setupEventListeners() {
     });
   }
 
-  // Assign Task directly to inspected robot
+  // Assign Task directly to inspected robot -> Opens task assignment modal with this robot pre-selected
   const btnInspAssign = document.getElementById('btn-insp-assign');
   if (btnInspAssign) {
     btnInspAssign.addEventListener('click', () => {
-      const robotId = SimState.selectedRobotId || (SimState.robots[0] ? SimState.robots[0].id : null);
-      if (!robotId) return;
-      const robot = SimState.robots.find(r => r.id === robotId);
-      if (!robot) return;
+      const targetId = SimState.selectedRobotId || (SimState.robots[0] ? SimState.robots[0].id : null);
+      if (!targetId) return;
 
-      // Find available warehouse boxes not in transit
-      let availableBoxes = SimState.boxes.filter(b => !b.inTransit);
-      if (availableBoxes.length === 0) {
-        SimState.boxes.forEach(b => b.inTransit = false);
-        availableBoxes = SimState.boxes;
-      }
-      if (availableBoxes.length === 0) return;
+      const inspModal = document.getElementById('modal-robot-inspector');
+      if (inspModal) inspModal.classList.remove('active');
 
-      const randomBox = availableBoxes[Math.floor(Math.random() * Math.min(12, availableBoxes.length))];
-      const randomBay = WarehouseConfig.deliveryBays[Math.floor(Math.random() * WarehouseConfig.deliveryBays.length)];
+      updateRobotSelectDropdowns();
+      populateTaskSKUSelector();
 
-      const newTask = WarehouseSim.createManualTask(randomBox.sku, randomBay.id, 'P1', robot.id);
-
-      // Instant UI update in inspector modal
-      const statusEl = document.getElementById('insp-status');
-      if (statusEl) statusEl.textContent = 'EN ROUTE PICKUP';
-      const descEl = document.getElementById('insp-task-desc');
-      if (descEl && newTask) {
-        descEl.textContent = `Task ${newTask.id}: Carrying ${newTask.sku} to ${newTask.targetBay?.name || 'Delivery Bay'} (Priority ${newTask.priority})`;
+      // Pre-select the inspected robot in target robot selector
+      const selRobot = document.getElementById('select-task-assigned-robot');
+      if (selRobot) {
+        selRobot.value = targetId;
       }
 
-      // Immediate visual feedback on the button
-      const originalText = btnInspAssign.textContent;
-      btnInspAssign.textContent = '✅ Task Dispatched!';
-      btnInspAssign.style.background = 'rgba(16, 185, 129, 0.25)';
-      btnInspAssign.style.borderColor = '#10b981';
-      btnInspAssign.style.color = '#10b981';
-
-      setTimeout(() => {
-        btnInspAssign.textContent = originalText;
-        btnInspAssign.style.background = 'rgba(245, 158, 11, 0.2)';
-        btnInspAssign.style.borderColor = 'var(--accent-orange)';
-        btnInspAssign.style.color = 'var(--accent-orange)';
-      }, 1600);
-
-      updateUILists();
-      updateInspectorModalLive();
+      const taskModal = document.getElementById('modal-create-task');
+      if (taskModal) taskModal.classList.add('active');
     });
   }
 

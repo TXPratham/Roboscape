@@ -875,16 +875,24 @@ const WarehouseSim = {
   },
 
   spawnNewRobot(model = 'ATR-400') {
-    const count = SimState.robots.length + 1;
+    let maxId = 0;
+    SimState.robots.forEach(r => {
+      const match = r.id.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxId) maxId = num;
+      }
+    });
+    const count = maxId + 1;
     const isHeavy = model === 'ATR-600';
     const newRobot = {
       id: `robot-${count}`,
       name: `${model} #${count}`,
       model: model,
       type: isHeavy ? 'heavy_arm' : 'courier',
-      x: -12 + (count * 2.5) % 24,
+      x: -12 + ((count * 2.8) % 24),
       z: 5.5 + this.LANE_OFFSET,
-      targetX: -12 + (count * 2.5) % 24,
+      targetX: -12 + ((count * 2.8) % 24),
       targetZ: 5.5 + this.LANE_OFFSET,
       rotation: 0,
       targetRotation: 0,
